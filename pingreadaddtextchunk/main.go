@@ -3,10 +3,26 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"hash/crc32"
 	"io"
 	"os"
 )
+
+func dumpChunk(chunk io.Reader) {
+	var length int32
+	binary.Read(chunk, binary.BigEndian, &length)
+
+	buffer := make([]byte, 4)
+	chunk.Read(buffer)
+	fmt.Printf("chunk '%v' (%d bytes)\n", string(buffer), length)
+
+	if bytes.Equal(buffer, []byte("tEXt")) {
+		rawText := make([]byte, length)
+		chunk.Read(rawText)
+		fmt.Println(string(rawText))
+	}
+}
 
 func textChunk(text string) io.Reader {
 	byteData := []byte(text)
@@ -71,5 +87,10 @@ func main() {
 	// write rest chunk
 	for _, chunk := range chunks[1:] {
 		io.Copy(newFile, chunk)
+	}
+
+	chunks2 := readChunk(newFile)
+	for _, chunk := range chunks2 {
+		dumpChunk(chunk)
 	}
 }
